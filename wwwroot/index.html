@@ -1,0 +1,445 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/ol-wkt@6.7.0/dist/ol-wkt.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenLayers Map with Font Awesome Icons</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"> 
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+        }
+
+        #navbar {
+            background-color: #333;
+            overflow: hidden;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 10;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+            #navbar a {
+                float: left;
+                display: block;
+                color: #f2f2f2;
+                text-align: center;
+                padding: 14px 16px;
+                text-decoration: none;
+                transition: background-color 0.3s, color 0.3s;
+                border-radius: 4px;
+                margin: 4px;
+                font-weight: bold;
+                font-size: 16px;
+            }
+
+                #navbar a:hover {
+                    background-color: #555;
+                    color: #fff;
+                }
+
+        #map {
+            width: 100%;
+            height: calc(100vh - 58px);
+            position: absolute;
+            top: 58px;
+        }
+
+        #panel {
+            display: none; 
+            position: fixed;
+            top: 58px;
+            right: 20px; 
+            width: 400px; 
+            height: calc(100vh - 58px);
+            background-color: #fff;
+            border: 1px solid #ddd;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+            z-index: 20;
+            padding: 20px; 
+            border-radius: 8px;
+            overflow: auto;
+            transition: transform 0.3s ease;
+            background: linear-gradient(to bottom, #fff, #f9f9f9);
+        }
+
+            #panel.show {
+                display: block; 
+                transform: translateX(0); 
+            }
+
+            #panel.hide {
+                transform: translateX(100%); 
+            }
+
+        #panel-header {
+            cursor: pointer;
+            background-color: #333;
+            color: #fff;
+            padding: 15px; 
+            text-align: center;
+            font-size: 20px;
+            border-radius: 8px;
+            position: relative;
+            user-select: none;
+            font-weight: bold;
+        }
+
+            #panel-header .toggle-btn {
+                position: absolute;
+                right: 20px; 
+                top: 50%;
+                transform: translateY(-50%);
+                font-size: 20px; 
+            }
+
+        #point-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+            #point-table th, #point-table td {
+                border: 1px solid #ddd;
+                padding: 15px;
+                text-align: left;
+            }
+
+            #point-table th {
+                background-color: #f4f4f4;
+                font-weight: bold;
+            }
+
+            #point-table td button {
+                margin: 2px;
+                padding: 8px 16px;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: bold;
+                transition: background-color 0.3s, color 0.3s;
+            }
+
+                #point-table td button.show-btn {
+                    background-color: #007BFF;
+                    color: white;
+                }
+
+                    #point-table td button.show-btn:hover {
+                        background-color: #0056b3;
+                    }
+
+                #point-table td button.delete-btn {
+                    background-color: #dc3545;
+                    color: white;
+                }
+
+                    #point-table td button.delete-btn:hover {
+                        background-color: #c82333;
+                    }
+
+                #point-table td button.update-btn {
+                    background-color: #28a745;
+                    color: white;
+                }
+
+                    #point-table td button.update-btn:hover {
+                        background-color: #218838;
+                    }
+
+        #point-details {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px; 
+            background-color: #fff;
+            border: 1px solid #ddd;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+            z-index: 30;
+            padding: 20px; 
+            border-radius: 8px;
+            background: linear-gradient(to bottom, #fff, #f9f9f9);
+        }
+
+            #point-details.show {
+                display: block;
+            }
+
+            #point-details h2 {
+                margin-top: 0;
+                font-size: 20px; 
+                color: #333;
+                font-weight: bold;
+            }
+
+            #point-details label {
+                display: block;
+                margin: 12px 0 6px;
+                font-weight: bold;
+                color: #555;
+            }
+
+            #point-details input[type="text"] {
+                width: calc(100% - 20px);
+                padding: 10px; 
+                margin-bottom: 12px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                font-size: 14px;
+            }
+
+            #point-details button {
+                display: block;
+                width: 100%;
+                padding: 12px;
+                margin: 5px 0;
+                border: none;
+                border-radius: 5px;
+                background-color: #4CAF50;
+                color: white;
+                font-size: 16px;
+                cursor: pointer;
+                transition: background-color 0.3s;
+            }
+
+                #point-details button:hover {
+                    background-color: #45a049;
+                }
+    </style>
+</head>
+<body>
+    <div id="navbar">
+        <a href="#" id="add-point-btn">Add Point</a>
+        <a href="#" id="query-btn">Query</a>
+    </div>
+    <div id="map"></div>
+    <div id="panel" class="hide">
+        <div id="panel-header">
+            Points List
+            <span class="toggle-btn" onclick="togglePanel()"><i class="fas fa-times"></i></span>
+        </div>
+        <table id="point-table">
+            <thead>
+                <tr>
+                    <th>Point</th>
+                    <th>X </th>
+                    <th>Y </th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="point-list">
+                
+            </tbody>
+        </table>
+    </div>
+    <div id="point-details">
+        <h2>New Point</h2>
+        <label for="point-name">Point Name:</label>
+        <input type="text" id="point-name">
+        <label for="point-lat">X Coordinate:</label>
+        <input type="text" id="point-lat" readonly>
+        <label for="point-lon">Y Coordinate:</label>
+        <input type="text" id="point-lon" readonly>
+        <button id="save-point-btn">Save Point</button>
+    </div>
+    <script src="lib/openlayers/ol.js"></script>
+    <script>
+        var map = new ol.Map({
+            target: 'map',
+            layers: [
+                new ol.layer.Tile({
+                    source: new ol.source.OSM()
+                })
+            ],
+            view: new ol.View({
+                center: ol.proj.fromLonLat([35, 39]), 
+                zoom: 6 
+            })
+        });
+
+        var addPointActive = false; 
+        var points = [];
+        var currentPointIndex = -1; 
+
+      
+        document.getElementById('add-point-btn').addEventListener('click', function () {
+            addPointActive = !addPointActive;
+            this.classList.toggle('active', addPointActive);
+        });
+
+       
+        map.on('singleclick', function (event) {
+            if (addPointActive) {
+                var coords = ol.proj.toLonLat(event.coordinate);
+                currentPointIndex = points.length;
+
+              
+                document.getElementById('point-name').value = '';
+                document.getElementById('point-lat').value = coords[1].toFixed(4);
+                document.getElementById('point-lon').value = coords[0].toFixed(4);
+
+               
+                togglePointDetails(true);
+
+               
+                var marker = new ol.Feature({
+                    geometry: new ol.geom.Point(event.coordinate),
+                    name: 'Unnamed Point'
+                });
+
+                var iconStyle = new ol.style.Style({
+                    image: new ol.style.Icon({
+                        anchor: [0.5, 1],
+                        src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 4.25 7 13 7 13s7-8.75 7-13c0-3.87-3.13-7-7-7zm0 10.75c-1.52 0-2.75-1.23-2.75-2.75S10.48 7.25 12 7.25 14.75 8.48 14.75 10 13.52 12.75 12 12.75z"/><path d="M0 0h24v24H0z" fill="none"/></svg>',
+                        color: 'red',
+                        scale: 1.5
+                    })
+                });
+                marker.setStyle(iconStyle);
+
+                var vectorSource = new ol.source.Vector({
+                    features: [marker]
+                });
+                var vectorLayer = new ol.layer.Vector({
+                    source: vectorSource
+                });
+                map.addLayer(vectorLayer);
+
+                
+                points.push({
+                    coords: coords,
+                    name: 'Unnamed Point',
+                    marker: marker,
+                    vectorLayer: vectorLayer
+                });
+                addPointActive = false;
+                updatePointList();
+            }
+        });
+
+       
+        document.getElementById('query-btn').addEventListener('click', function () {
+            var panel = document.getElementById('panel');
+            if (panel.classList.contains('hide')) {
+                panel.classList.remove('hide');
+                panel.classList.add('show');
+                updatePointList();
+            } else {
+                panel.classList.remove('show');
+                panel.classList.add('hide');
+            }
+        });
+
+    
+        function updatePointList() {
+            var pointList = document.getElementById('point-list');
+            pointList.innerHTML = '';
+            points.forEach(function (point, index) {
+                var tr = document.createElement('tr');
+                tr.innerHTML =
+                    `<td>${point.name}</td>
+                                <td>${point.coords[1].toFixed(4)}</td>
+                                <td>${point.coords[0].toFixed(4)}</td>
+                                <td>
+                                    <button class="show-btn" data-index="${index}">Show</button>
+                                    <button class="update-btn" data-index="${index}">Update</button>
+                                    <button class="delete-btn" data-index="${index}">Delete</button>
+                                </td>`;
+                pointList.appendChild(tr);
+            });
+
+            document.querySelectorAll('.show-btn').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    var index = parseInt(this.getAttribute('data-index'), 10);
+                    var coords = points[index].coords;
+                    map.getView().setCenter(ol.proj.fromLonLat(coords));
+                    map.getView().setZoom(12);
+                });
+            });
+
+           
+            document.querySelectorAll('.delete-btn').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    var index = parseInt(this.getAttribute('data-index'), 10);
+                    var point = points[index];
+
+                    map.removeLayer(point.vectorLayer);
+
+                    
+                    points.splice(index, 1);
+
+                    
+                    updatePointList();
+                });
+            });
+
+            document.querySelectorAll('.update-btn').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    var index = parseInt(this.getAttribute('data-index'), 10);
+                    currentPointIndex = index;
+
+                    document.getElementById('point-name').value = points[index].name;
+                    document.getElementById('point-lat').value = points[index].coords[1].toFixed(4);
+                    document.getElementById('point-lon').value = points[index].coords[0].toFixed(4);
+
+                   
+                    togglePointDetails(true);
+                });
+            });
+        }
+
+       
+        function togglePointDetails(show) {
+            var pointDetails = document.getElementById('point-details');
+            if (show) {
+                pointDetails.classList.add('show');
+            } else {
+                pointDetails.classList.remove('show');
+            }
+        }
+
+        
+        document.getElementById('save-point-btn').addEventListener('click', function () {
+            var name = document.getElementById('point-name').value;
+            var lat = parseFloat(document.getElementById('point-lat').value);
+            var lon = parseFloat(document.getElementById('point-lon').value);
+
+            if (name && !isNaN(lat) && !isNaN(lon)) {
+                
+                points[currentPointIndex].name = name;
+                points[currentPointIndex].coords = [lon, lat];
+                points[currentPointIndex].marker.setGeometry(new ol.geom.Point(ol.proj.fromLonLat([lon, lat])));
+
+            
+                updatePointList();
+
+                
+                togglePointDetails(false);
+            } else {
+                alert('Invalid input!');
+            }
+        });
+
+        function togglePanel() {
+            var panel = document.getElementById('panel');
+            if (panel.classList.contains('hide')) {
+                panel.classList.remove('hide');
+                panel.classList.add('show');
+            } else {
+                panel.classList.remove('show');
+                panel.classList.add('hide');
+            }
+        }
+
+    </script>
+
+</body>
+</html>
